@@ -1,6 +1,7 @@
 #include "mpu6050.h"
 #include "FreeRTOS.h"
 
+
 // Configuração do I2C0 (Conectado ao MPU6050):
 const uint8_t I2C0_MASTER_SDA_IO = GPIO_NUM_21;
 const uint8_t I2C0_MASTER_SCL_IO = GPIO_NUM_22;
@@ -31,14 +32,22 @@ void mpu6050_config()
 
 void mpu6050_task(void *pvData)
 {
-    MessageBufferHandle_t buffer = (MessageBufferHandle_t) pvData;
-    mpu6050_accel_data accel_data;
-    
+    QueueHandle_t queue = (QueueHandle_t) pvData;
+
     mpu6050_config();
+    int16_t buffer[1000] = {0};
+    int16_t trash[1000] = {0};
 
     for(;;){
         mpu6050_accel_read(0, &accel_data);
-        xMessageBufferSend(buffer, (void *) &accel_data, sizeof(accel_data), 1000);
-        vTaskDelay(10/portTICK_PERIOD_MS);
+        for(int i=1; i<1000; i++)
+            buffer[i] = buffer[i-1];
+        
+        buffer[0] = accel_data.z;
+
+        if(!uxQueueSpacesAvailable(queue))
+            xQueueReceive(queue, trash, 1000);
+
+        xQueueSend(queue, buffer, 1000);
     }
 }
