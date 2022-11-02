@@ -1,5 +1,5 @@
 #include "mpu6050.h"
-#include "FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 
 
 // Configuração do I2C0 (Conectado ao MPU6050):
@@ -37,6 +37,8 @@ void mpu6050_task(void *pvData)
     mpu6050_config();
     int16_t buffer[1000] = {0};
     int16_t trash[1000] = {0};
+
+    mpu6050_accel_data accel_data;
 
     for(;;){
         mpu6050_accel_read(0, &accel_data);

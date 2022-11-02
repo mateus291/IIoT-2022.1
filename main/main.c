@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 #include "mpu6050.h"
 #include "onewire_bus.h"
@@ -13,6 +14,10 @@
 
 #include <string.h>
 #include "mpu6050_task.h"
+#include "utils.h"
+
+#define I2C1_MASTER_SDA_IO 32
+#define I2C1_MASTER_SCL_IO 33
 
 void app_main(void)
 {
@@ -20,15 +25,34 @@ void app_main(void)
 
     TaskHandle_t mpu6050_task_handle;
     xTaskCreate(mpu6050_task, "mpu6050_task", 
-                2048, (void *) accel_queue, 2,
+                10000, (void *) accel_queue, 2,
                 &mpu6050_task_handle);
 
-    int16_t 
+    float crrt_rms;
+    int16_t accel_z_data[1000];
+
+    // Configurando display OLED:
+    SSD1306_t oled;
+    i2c_master_init(&oled, I2C1_MASTER_SDA_IO, I2C1_MASTER_SCL_IO, -1);
+    ssd1306_init(&oled, 128, 64);
+    ssd1306_clear_screen(&oled, false);
+    ssd1306_contrast(&oled, 0xFF);
+    vTaskDelay(200/portTICK_PERIOD_MS);
+
+    char text[20];
 
     for(;;)
     {
+        vTaskDelay(500/portTICK_PERIOD_MS);
 
-        ESP_LOGI("teste", "%d", );
+        xQueueReceive(accel_queue, (void *) accel_z_data, 1000);
+        crrt_rms = rms(accel_z_data, 1000);
 
+        sprintf(text, "Oi: %.3f", crrt_rms);
+        ssd1306_clear_screen(&oled, false);
+        ssd1306_contrast(&oled, 0xFF);
+        ssd1306_display_text(&oled, 0, text, 20, false);
+
+        ESP_LOGI("Teste", "%s", text);
     }
 }
