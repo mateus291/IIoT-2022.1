@@ -12,8 +12,23 @@
 #include "font8x8_basic.h"
 
 #include <string.h>
+#include "mpu6050_task.h"
 
 void app_main(void)
 {
-    
+    QueueHandle_t accel_queue = xQueueCreate(1, 1000*sizeof(int16_t) );
+
+    TaskHandle_t mpu6050_task_handle;
+    xTaskCreate(mpu6050_task, "mpu6050_task", 
+                2048, (void *) accel_queue, 2,
+                &mpu6050_task_handle);
+
+    int16_t 
+
+    for(;;)
+    {
+
+        ESP_LOGI("teste", "%d", );
+
+    }
 }
