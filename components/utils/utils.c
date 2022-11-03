@@ -21,3 +21,23 @@ float rms(int16_t *y, size_t numel) {
     
     return y_rms; // Retorna o valor RMS do sinal y.
 }
+
+int16_t max(int16_t vet[], uint16_t N){
+    uint16_t i;
+    int16_t max = vet[0];
+
+    for (i = 1; i < N; i++)
+        if (vet[i] > max)
+            max = vet[i];
+    return max;
+}
+
+int16_t min(int16_t vet[], uint16_t N){
+    uint16_t i;
+    int16_t min = vet[0];
+
+    for (i = 1; i < N; i++)
+        if (vet[i] < min)
+            min = vet[i];
+    return min;
+}

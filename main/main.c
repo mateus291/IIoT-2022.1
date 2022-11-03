@@ -24,8 +24,9 @@ void app_main(void)
     QueueHandle_t accel_queue = xQueueCreate(1, 1000*sizeof(int16_t) );
 
     TaskHandle_t mpu6050_task_handle;
-    xTaskCreate(mpu6050_task, "mpu6050_task", 
-                10000, (void *) accel_queue, 2,
+    xTaskCreate(mpu6050_task, "mpu6050_task",
+                10000,
+                (void *) accel_queue, 2,
                 &mpu6050_task_handle);
 
     float crrt_rms;
