@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-float rms(int16_t *y, size_t numel) {
-    // Mateus Soares Marques 118210035
+float rms(int16_t *function, int total_samples) {
+    float integral_squared = 0.0f, y_rms = 0.0f;
 
     int32_t sum = 0; // Soma do quadrado das amostras
     float y_rms = 0; // Valor RMS do sinal y
@@ -40,4 +40,3 @@ int16_t min(int16_t vet[], uint16_t N){
         if (vet[i] < min)
             min = vet[i];
     return min;
-}

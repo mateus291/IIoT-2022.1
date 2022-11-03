@@ -13,24 +13,67 @@
 #include "font8x8_basic.h"
 
 #include <string.h>
-#include "mpu6050_task.h"
 #include "utils.h"
+
+const int8_t I2C0_MASTER_SDA_IO = 21;
+const int8_t I2C0_MASTER_SCL_IO = 22;
+const int32_t I2C0_MASTER_FREQ_HZ = 400000;
 
 #define I2C1_MASTER_SDA_IO 32
 #define I2C1_MASTER_SCL_IO 33
 
+QueueHandle_t accel_queue;
+
+void accel_task(void *ignore)
+{
+    // Configuração do MPU6050:
+    i2c_port_t mpu6050_i2c_port = 0;
+    i2c_config_t mpu6050_i2c_config = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C0_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C0_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C0_MASTER_FREQ_HZ,
+        .clk_flags = 0,
+    };
+    
+    ESP_ERROR_CHECK(i2c_param_config(mpu6050_i2c_port, &mpu6050_i2c_config));
+	ESP_ERROR_CHECK(i2c_driver_install(mpu6050_i2c_port, I2C_MODE_MASTER, 0, 0, 0));
+    vTaskDelay(200/portTICK_PERIOD_MS);
+
+    // Configurando escala de leitura do Acelerômetro (MPU6050):
+    mpu6050_accel_config(mpu6050_i2c_port, MPU6050_ACCEL_FULL_SCALE_2G);
+    vTaskDelay(200/portTICK_PERIOD_MS);
+
+    mpu6050_accel_data accel_data;
+
+    int16_t buffer[1000] = {0};
+    float rms_value;
+
+    for(;;){
+        vTaskDelay(10/portTICK_PERIOD_MS);
+        mpu6050_accel_read(0, &accel_data);
+        for(int i=1; i<1000; i++)
+            buffer[i] = buffer[i-1];
+        
+        buffer[0] = accel_data.z;
+        rms_value = rms(buffer, 1000);
+        xQueueOverwrite(accel_queue, (void *) &rms_value);
+    }
+}
+
 void app_main(void)
 {
-    QueueHandle_t accel_queue = xQueueCreate(1, 1000*sizeof(int16_t) );
+    accel_queue = xQueueCreate(1, sizeof(float));
 
     TaskHandle_t mpu6050_task_handle;
-    xTaskCreate(mpu6050_task, "mpu6050_task",
-                10000,
-                (void *) accel_queue, 2,
+
+    xTaskCreate(accel_task, "mpu6050_task", 
+                10000, NULL, 0,
                 &mpu6050_task_handle);
 
     float crrt_rms;
-    int16_t accel_z_data[1000];
 
     // Configurando display OLED:
     SSD1306_t oled;
@@ -38,22 +81,20 @@ void app_main(void)
     ssd1306_init(&oled, 128, 64);
     ssd1306_clear_screen(&oled, false);
     ssd1306_contrast(&oled, 0xFF);
-    vTaskDelay(200/portTICK_PERIOD_MS);
+    ssd1306_display_text_x3(&oled, 0, "TEuKo", 6, false);
+    ssd1306_display_text(&oled, 6, "inc.", 4, false);
+    vTaskDelay(2000/portTICK_PERIOD_MS);
+    ssd1306_clear_screen(&oled, false);
 
     char text[20];
 
     for(;;)
     {
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(200/portTICK_PERIOD_MS);
 
-        xQueueReceive(accel_queue, (void *) accel_z_data, 1000);
-        crrt_rms = rms(accel_z_data, 1000);
-
-        sprintf(text, "Oi: %.3f", crrt_rms);
-        ssd1306_clear_screen(&oled, false);
-        ssd1306_contrast(&oled, 0xFF);
+        xQueuePeek(accel_queue, (void *) &crrt_rms, 0);
+        
+        sprintf(text, "RMS: %.3f", crrt_rms/MPU6050_ACCEL_LSB_SENS_2G - 1.0f);
         ssd1306_display_text(&oled, 0, text, 20, false);
-
-        ESP_LOGI("Teste", "%s", text);
     }
 }
