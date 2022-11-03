@@ -210,7 +210,7 @@ void app_main(void)
         /* Exibição dos valores no display */
 
         /* Aceleração */
-        sprintf(text_accel, "acc(rms): % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
+        sprintf(text_accel, "acc(rms): %.3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
         ssd1306_display_text(&oled, 0, text_accel, strlen(text_accel), false);
 
         sprintf(text_accel_min, "min: % .3f g  ", ((float) current_accel_min)/MPU6050_ACCEL_LSB_SENS_2G);
