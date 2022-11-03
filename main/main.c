@@ -197,7 +197,7 @@ void app_main(void)
 
     for(;;)
     {
-        vTaskDelay(50/portTICK_PERIOD_MS);
+        vTaskDelay(30/portTICK_PERIOD_MS);
 
         xQueuePeek(accel_queue, (void *) &current_rms, 0);
         xQueuePeek(temp_queue, (void* ) &current_temp, 0);
