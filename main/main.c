@@ -112,7 +112,6 @@ void temp_task(void* ignore)
 
     for(;;)
     {
-        vTaskDelay(300/portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(owb_handle, NULL));
         vTaskDelay(200/portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(ds18b20_get_temperature(owb_handle, NULL, &temperature));
