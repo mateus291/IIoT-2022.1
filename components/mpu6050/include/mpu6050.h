@@ -20,6 +20,16 @@
 #define MPU6050_ACCEL_LSB_SENS_8G       4096
 #define MPU6050_ACCEL_LSB_SENS_16G      2048
 
+#define MPU6050_I2C_MASTER_FREQ_HZ      400000
+
+typedef struct 
+{
+    i2c_port_t i2c_port;
+    int sda;
+    int scl;
+    uint8_t scale;
+} mpu6050_config_t;
+
 typedef struct
 {
     int16_t x;
@@ -27,12 +37,14 @@ typedef struct
     int16_t z;
 } mpu6050_accel_data;
 
-void mpu6050_accel_config(i2c_port_t i2c_port, uint8_t resolution);
+extern i2c_port_t mpu6050_i2c_port;
+
+void mpu6050_accel_install(mpu6050_config_t * config);
 /**
  * @brief Configura a resolução do acelerômetro;
 */
 
-void mpu6050_accel_read(i2c_port_t i2c_port, mpu6050_accel_data * accel_data);
+void mpu6050_accel_read(mpu6050_accel_data * accel_data);
 /**
  * @brief Lê dados do acelerômetro;
 */
