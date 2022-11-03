@@ -1,5 +1,6 @@
 #include "mpu6050.h"
 #include "freertos/FreeRTOS.h"
+#include "utils.h"
 
 
 // Configuração do I2C0 (Conectado ao MPU6050):
@@ -7,7 +8,7 @@ const uint8_t I2C0_MASTER_SDA_IO = GPIO_NUM_21;
 const uint8_t I2C0_MASTER_SCL_IO = GPIO_NUM_22;
 const uint32_t I2C0_MASTER_FREQ_HZ = 250000;
 
-void mpu6050_config()
+void accel_config()
 {
     // Configuração do MPU6050:
     i2c_port_t mpu6050_i2c_port = 0;
@@ -30,26 +31,24 @@ void mpu6050_config()
     vTaskDelay(200/portTICK_PERIOD_MS);
 }
 
-void mpu6050_task(void *pvData)
+void accel_task(void *pvData)
 {
     QueueHandle_t queue = (QueueHandle_t) pvData;
 
-    mpu6050_config();
-    int16_t buffer[1000] = {0};
-    int16_t trash[1000] = {0};
-
+    accel_config();
     mpu6050_accel_data accel_data;
 
+    int16_t buffer[1000] = {0};
+    float rms_value;
+
     for(;;){
+        vTaskDelay(10/portTICK_PERIOD_MS);
         mpu6050_accel_read(0, &accel_data);
         for(int i=1; i<1000; i++)
             buffer[i] = buffer[i-1];
         
         buffer[0] = accel_data.z;
-
-        if(!uxQueueSpacesAvailable(queue))
-            xQueueReceive(queue, trash, 1000);
-
-        xQueueSend(queue, buffer, 1000);
+        rms_value = rms(buffer, 1000);
+        xQueueOverwrite(queue, (void *) &rms_value);
     }
 }

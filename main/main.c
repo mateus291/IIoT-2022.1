@@ -13,7 +13,7 @@
 #include "font8x8_basic.h"
 
 #include <string.h>
-#include "mpu6050_task.h"
+#include "accel_task.h"
 #include "utils.h"
 
 #define I2C1_MASTER_SDA_IO 32
@@ -21,15 +21,14 @@
 
 void app_main(void)
 {
-    QueueHandle_t accel_queue = xQueueCreate(1, 1000*sizeof(int16_t) );
+    QueueHandle_t accel_queue = xQueueCreate(1, sizeof(int16_t));
 
     TaskHandle_t mpu6050_task_handle;
-    xTaskCreate(mpu6050_task, "mpu6050_task", 
+    xTaskCreate(accel_task, "mpu6050_task", 
                 10000, (void *) accel_queue, 2,
                 &mpu6050_task_handle);
 
     float crrt_rms;
-    int16_t accel_z_data[1000];
 
     // Configurando display OLED:
     SSD1306_t oled;
@@ -43,12 +42,11 @@ void app_main(void)
 
     for(;;)
     {
-        vTaskDelay(500/portTICK_PERIOD_MS);
+        vTaskDelay(200/portTICK_PERIOD_MS);
 
-        xQueueReceive(accel_queue, (void *) accel_z_data, 1000);
-        crrt_rms = rms(accel_z_data, 1000);
-
-        sprintf(text, "Oi: %.3f", crrt_rms);
+        xQueueReceive(accel_queue, (void *) &crrt_rms, 1000);
+        
+        sprintf(text, "RMS: %.3f", crrt_rms);
         ssd1306_clear_screen(&oled, false);
         ssd1306_contrast(&oled, 0xFF);
         ssd1306_display_text(&oled, 0, text, 20, false);
