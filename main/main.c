@@ -69,7 +69,7 @@ void app_main(void)
 
     TaskHandle_t mpu6050_task_handle;
     xTaskCreate(accel_task, "mpu6050_task", 
-                10000, NULL, 2,
+                10000, NULL, 0,
                 &mpu6050_task_handle);
 
     float crrt_rms;
@@ -88,9 +88,9 @@ void app_main(void)
     {
         vTaskDelay(200/portTICK_PERIOD_MS);
 
-        xQueueReceive(accel_queue, (void *) &crrt_rms, 1000);
+        xQueuePeek(accel_queue, (void *) &crrt_rms, 0);
         
-        sprintf(text, "RMS: %.3f", crrt_rms);
+        sprintf(text, "RMS: %.1f", crrt_rms);
         ssd1306_clear_screen(&oled, false);
         ssd1306_contrast(&oled, 0xFF);
         ssd1306_display_text(&oled, 0, text, 20, false);
