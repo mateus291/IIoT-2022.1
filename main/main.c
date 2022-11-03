@@ -48,24 +48,24 @@ void accel_task(void *ignore)
 
     mpu6050_accel_data accel_data;
 
-    int16_t buffer[10] = {0};
+    int16_t buffer[1000] = {0};
     float rms_value;
 
     for(;;){
         vTaskDelay(10/portTICK_PERIOD_MS);
         mpu6050_accel_read(0, &accel_data);
-        for(int i=1; i<10; i++)
+        for(int i=1; i<1000; i++)
             buffer[i] = buffer[i-1];
         
         buffer[0] = accel_data.z;
-        rms_value = rms(buffer, 10);
+        rms_value = rms(buffer, 1000);
         xQueueOverwrite(accel_queue, (void *) &rms_value);
     }
 }
 
 void app_main(void)
 {
-    accel_queue = xQueueCreate(1, sizeof(int16_t));
+    accel_queue = xQueueCreate(1, sizeof(float));
 
     TaskHandle_t mpu6050_task_handle;
     xTaskCreate(accel_task, "mpu6050_task", 
@@ -80,7 +80,10 @@ void app_main(void)
     ssd1306_init(&oled, 128, 64);
     ssd1306_clear_screen(&oled, false);
     ssd1306_contrast(&oled, 0xFF);
-    vTaskDelay(200/portTICK_PERIOD_MS);
+    ssd1306_display_text_x3(&oled, 0, "TEuKo", 6, false);
+    ssd1306_display_text(&oled, 6, "inc.", 4, false);
+    vTaskDelay(2000/portTICK_PERIOD_MS);
+    ssd1306_clear_screen(&oled, false);
 
     char text[20];
 
@@ -90,9 +93,7 @@ void app_main(void)
 
         xQueuePeek(accel_queue, (void *) &crrt_rms, 0);
         
-        sprintf(text, "RMS: %.1f", crrt_rms);
-        ssd1306_clear_screen(&oled, false);
-        ssd1306_contrast(&oled, 0xFF);
+        sprintf(text, "RMS: %.3f", crrt_rms/MPU6050_ACCEL_LSB_SENS_2G - 1.0f);
         ssd1306_display_text(&oled, 0, text, 20, false);
     }
 }
