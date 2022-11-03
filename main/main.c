@@ -68,6 +68,7 @@ void app_main(void)
     accel_queue = xQueueCreate(1, sizeof(float));
 
     TaskHandle_t mpu6050_task_handle;
+
     xTaskCreate(accel_task, "mpu6050_task", 
                 10000, NULL, 0,
                 &mpu6050_task_handle);
