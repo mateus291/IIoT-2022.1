@@ -1,1 +1,1 @@
-float rms(int16_t *y, size_t numel);
+float rms(int16_t *y, int numel);

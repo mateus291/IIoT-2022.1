@@ -1,7 +1,7 @@
 #include "mpu6050.h"
 #include "freertos/FreeRTOS.h"
 #include "utils.h"
-
+#include "esp_log.h"
 
 // Configuração do I2C0 (Conectado ao MPU6050):
 const uint8_t I2C0_MASTER_SDA_IO = GPIO_NUM_21;
@@ -38,18 +38,17 @@ void accel_task(void *pvData)
     accel_config();
     mpu6050_accel_data accel_data;
 
-    int16_t buffer[1000] = {0};
+    int16_t buffer[10] = {0};
     float rms_value;
 
     for(;;){
         vTaskDelay(10/portTICK_PERIOD_MS);
         mpu6050_accel_read(0, &accel_data);
-        for(int i=1; i<1000; i++)
+        for(int i=1; i<10; i++)
             buffer[i] = buffer[i-1];
         
         buffer[0] = accel_data.z;
-        ESP_LOGI("ACCEL", accel_data.z);
-        rms_value = rms(buffer, 1000);
+        rms_value = rms(buffer, 10);
         xQueueOverwrite(queue, (void *) &rms_value);
     }
 }

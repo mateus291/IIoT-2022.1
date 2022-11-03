@@ -4,20 +4,19 @@
 #include <stdlib.h>
 #include <math.h>
 
-float rms(int16_t *y, size_t numel) {
-    // Mateus Soares Marques 118210035
+float rms(int16_t *function, int total_samples) {
+    float integral_squared = 0.0f, y_rms = 0.0f;
 
-    int32_t sum = 0; // Soma do quadrado das amostras
-    float y_rms = 0; // Valor RMS do sinal y
-    
-    // Percorre o array de amostras y (sinal), acumulando o
-    // quadrado de cada amostra em sum:
-    for(int i = 0; i < (int) numel; i++)
-        sum = sum + y[i]*y[i];
-    
-    // Divide a soma do quadrado das amostras pelo número de amostras
-    // e extrai a raiz quadrada do resultado, guardando o valor em y_rms:
-    y_rms = sqrt(((float) sum)/((float) numel));
-    
-    return y_rms; // Retorna o valor RMS do sinal y.
+	/* Realiza o somatório das amostras ao quadrado do sinal */
+	for (int sample = 0; sample < total_samples; sample++)
+	{
+		integral_squared += pow(function[sample], 2.0f);
+	}
+
+	/* Faz a divisão do somatório pelo número de amostras
+	 * e calcula a raíz quadrada
+	 */
+	y_rms = sqrt((1.0f / total_samples) * integral_squared);
+
+	return y_rms;
 }

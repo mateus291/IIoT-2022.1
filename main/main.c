@@ -50,7 +50,5 @@ void app_main(void)
         ssd1306_clear_screen(&oled, false);
         ssd1306_contrast(&oled, 0xFF);
         ssd1306_display_text(&oled, 0, text, 20, false);
-
-        ESP_LOGI("Teste", "%s", text);
     }
 }
