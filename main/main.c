@@ -13,19 +13,63 @@
 #include "font8x8_basic.h"
 
 #include <string.h>
-#include "accel_task.h"
 #include "utils.h"
+
+const int8_t I2C0_MASTER_SDA_IO = 21;
+const int8_t I2C0_MASTER_SCL_IO = 22;
+const int32_t I2C0_MASTER_FREQ_HZ = 400000;
 
 #define I2C1_MASTER_SDA_IO 32
 #define I2C1_MASTER_SCL_IO 33
 
+QueueHandle_t accel_queue;
+
+void accel_task(void *ignore)
+{
+    // Configuração do MPU6050:
+    i2c_port_t mpu6050_i2c_port = 0;
+    i2c_config_t mpu6050_i2c_config = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C0_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C0_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C0_MASTER_FREQ_HZ,
+        .clk_flags = 0,
+    };
+    
+    ESP_ERROR_CHECK(i2c_param_config(mpu6050_i2c_port, &mpu6050_i2c_config));
+	ESP_ERROR_CHECK(i2c_driver_install(mpu6050_i2c_port, I2C_MODE_MASTER, 0, 0, 0));
+    vTaskDelay(200/portTICK_PERIOD_MS);
+
+    // Configurando escala de leitura do Acelerômetro (MPU6050):
+    mpu6050_accel_config(mpu6050_i2c_port, MPU6050_ACCEL_FULL_SCALE_2G);
+    vTaskDelay(200/portTICK_PERIOD_MS);
+
+    mpu6050_accel_data accel_data;
+
+    int16_t buffer[10] = {0};
+    float rms_value;
+
+    for(;;){
+        vTaskDelay(10/portTICK_PERIOD_MS);
+        mpu6050_accel_read(0, &accel_data);
+        for(int i=1; i<10; i++)
+            buffer[i] = buffer[i-1];
+        
+        buffer[0] = accel_data.z;
+        rms_value = rms(buffer, 10);
+        xQueueOverwrite(accel_queue, (void *) &rms_value);
+    }
+}
+
 void app_main(void)
 {
-    QueueHandle_t accel_queue = xQueueCreate(1, sizeof(int16_t));
+    accel_queue = xQueueCreate(1, sizeof(int16_t));
 
     TaskHandle_t mpu6050_task_handle;
     xTaskCreate(accel_task, "mpu6050_task", 
-                10000, (void *) accel_queue, 2,
+                10000, NULL, 2,
                 &mpu6050_task_handle);
 
     float crrt_rms;
