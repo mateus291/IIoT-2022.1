@@ -187,8 +187,8 @@ void app_main(void)
     ssd1306_init(&oled, 128, 64);
     ssd1306_clear_screen(&oled, false);
     ssd1306_contrast(&oled, 0xFF);
-    ssd1306_display_text_x3(&oled, 0, "TEuKo", 6, false);
-    ssd1306_display_text(&oled, 6, "inc.", 4, false);
+    ssd1306_display_text_x3(&oled, 0, "IIoT", 4, false);
+    ssd1306_display_text_x3(&oled, 5, " 22.1", 6, false);
     vTaskDelay(2000/portTICK_PERIOD_MS);
     ssd1306_clear_screen(&oled, false);
 
@@ -210,24 +210,40 @@ void app_main(void)
         /* Exibição dos valores no display */
 
         /* Aceleração */
-        sprintf(text_accel, "acc(rms): %.3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
+        sprintf(text_accel, "acc(rms): %.3fg  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
         ssd1306_display_text(&oled, 0, text_accel, strlen(text_accel), false);
 
         sprintf(text_accel_min, "min: % .3f g  ", ((float) current_accel_min)/MPU6050_ACCEL_LSB_SENS_2G);
-        ssd1306_display_text(&oled, 1, text_accel_min, strlen(text_accel_min), false); 
+        ssd1306_display_text(&oled, 1, 
+                            current_accel_min >= INT16_MAX ? 
+                                "min:  ----- g " : 
+                                text_accel_min, 
+                            strlen(text_accel_min), false); 
 
         sprintf(text_accel_max, "max: % .3f g  ", ((float) current_accel_max)/MPU6050_ACCEL_LSB_SENS_2G);
-        ssd1306_display_text(&oled, 2, text_accel_max, strlen(text_accel_max), false);
+        ssd1306_display_text(&oled, 2, 
+                            current_accel_max <= INT16_MIN ? 
+                                "max:  ----- g " : 
+                                text_accel_max,
+                            strlen(text_accel_max), false);
 
         /* Temperatura */
         sprintf(text_temp, "temp: %.1f oC", current_temp);
         ssd1306_display_text(&oled, 5, text_temp, strlen(text_temp), false);
 
-        sprintf(text_temp_min, "min: % .1f oC  ", current_temp_min == 100.0f ? 0.0f : current_temp_min);
-        ssd1306_display_text(&oled, 6, text_temp_min, strlen(text_temp_min), false);  
+        sprintf(text_temp_min, "min: % .1f oC  ", current_temp_min);
+        ssd1306_display_text(&oled, 6, 
+                            current_temp_min >= 100.0f ? 
+                                "min:  ---- oC " : 
+                                text_temp_min,
+                            strlen(text_temp_min), false);  
 
-        sprintf(text_temp_max, "max: % .1f oC  ", current_temp_max == -100.0f ? 0.0f : current_temp_max);
-        ssd1306_display_text(&oled, 7, text_temp_max, strlen(text_temp_max), false);
+        sprintf(text_temp_max, "max: % .1f oC  ", current_temp_max);
+        ssd1306_display_text(&oled, 7,
+                            current_temp_max <= -100.0f ? 
+                                "min:  ---- oC " : 
+                                text_temp_max, 
+                            strlen(text_temp_max), false); 
 
     }
 }
