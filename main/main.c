@@ -89,7 +89,7 @@ void accel_task(void *ignore)
     }
 }
 
-void temper_task(void* ignore)
+void temp_task(void* ignore)
 {
     /* Configuração do sensor de temperatura */
     // Configurando e instalando driver do barramento 1-Wire:
@@ -169,7 +169,7 @@ void app_main(void)
     xTaskCreate(accel_task, "mpu6050_task", 
                 10000, NULL, 0,
                 &mpu6050_task_handle);
-    xTaskCreate(temper_task, "ds18b20_task",
+    xTaskCreate(temp_task, "ds18b20_task",
                 10000, NULL, 0,
                 &ds18b20_task_handle);
     xTaskCreate(button_task, "button_reset_max_min",
