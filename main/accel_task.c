@@ -48,6 +48,7 @@ void accel_task(void *pvData)
             buffer[i] = buffer[i-1];
         
         buffer[0] = accel_data.z;
+        ESP_LOGI("ACCEL", accel_data.z);
         rms_value = rms(buffer, 1000);
         xQueueOverwrite(queue, (void *) &rms_value);
     }
