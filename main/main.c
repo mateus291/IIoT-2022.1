@@ -210,7 +210,7 @@ void app_main(void)
         /* Exibição dos valores no display */
 
         /* Aceleração */
-        sprintf(text_accel, "Acc(rms): % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
+        sprintf(text_accel, "acc(rms): % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
         ssd1306_display_text(&oled, 0, text_accel, strlen(text_accel), false);
 
         sprintf(text_accel_min, "min: % .3f g  ", ((float) current_accel_min)/MPU6050_ACCEL_LSB_SENS_2G);
@@ -220,7 +220,7 @@ void app_main(void)
         ssd1306_display_text(&oled, 2, text_accel_max, strlen(text_accel_max), false);
 
         /* Temperatura */
-        sprintf(text_temp, "Temp: %.1f oC", current_temp);
+        sprintf(text_temp, "temp: %.1f oC", current_temp);
         ssd1306_display_text(&oled, 5, text_temp, strlen(text_temp), false);
 
         sprintf(text_temp_min, "min: % .1f oC  ", current_temp_min == 100.0f ? 0.0f : current_temp_min);
