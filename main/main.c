@@ -26,7 +26,7 @@ const int32_t I2C0_MASTER_FREQ_HZ = 400000;
 #define BUTTON_PIN GPIO_NUM_4
 
 #define MAX_BUFF_SIZE 1000
-#define MAX_TEXT_SIZE 20
+#define MAX_TEXT_SIZE 28
 
 /* Valores instantâneos */
 QueueHandle_t accel_queue;
@@ -210,7 +210,7 @@ void app_main(void)
         /* Exibição dos valores no display */
 
         /* Aceleração */
-        sprintf(text_accel, "RMS_acc: % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
+        sprintf(text_accel, "Acc (rms): % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
         ssd1306_display_text(&oled, 0, text_accel, strlen(text_accel), false);
 
         sprintf(text_accel_min, "min: % .3f g  ", ((float) current_accel_min)/MPU6050_ACCEL_LSB_SENS_2G);
