@@ -30,16 +30,14 @@ const int32_t I2C0_MASTER_FREQ_HZ = 400000;
 
 /* Valores instantâneos */
 QueueHandle_t accel_queue;
-QueueHandle_t temper_queue;
+QueueHandle_t temp_queue;
 
 /* Valores Máximos e Mínimos */
 QueueHandle_t max_accel_queue;
 QueueHandle_t min_accel_queue;
 
-QueueHandle_t max_temper_queue;
-QueueHandle_t min_temper_queue;
-
-int16_t buffer[MAX_BUFF_SIZE] = {0};
+QueueHandle_t max_temp_queue;
+QueueHandle_t min_temp_queue;
 
 void accel_task(void *ignore)
 {
@@ -65,9 +63,10 @@ void accel_task(void *ignore)
 
     mpu6050_accel_data accel_data;
 
-    //int16_t buffer[1000] = {0};
+    int16_t buffer[1000] = {0};
     float current_rms_value;
-    float min_accel, max_accel;
+    int16_t min_accel = INT16_MAX; 
+    int16_t max_accel = INT16_MIN;
 
     for(;;){
         vTaskDelay(10/portTICK_PERIOD_MS);
@@ -77,10 +76,12 @@ void accel_task(void *ignore)
         
         buffer[0] = accel_data.z;
         current_rms_value = rms(buffer, MAX_BUFF_SIZE);
-        min_accel = (float) min(buffer, MAX_BUFF_SIZE);
-        max_accel = (float) max(buffer, MAX_BUFF_SIZE);
 
-        ESP_LOGI("MIN/MAX", "Min: %d / Max: %d", (int) min_accel, (int) max_accel);
+        xQueuePeek(min_accel_queue, &min_accel, 0);
+        xQueuePeek(max_accel_queue, &max_accel, 0);
+
+        min_accel = accel_data.z < min_accel ? accel_data.z : min_accel;
+        max_accel = accel_data.z > max_accel ? accel_data.z : max_accel;
 
         xQueueOverwrite(accel_queue, (void *) &current_rms_value);
         xQueueOverwrite(min_accel_queue, (void *) &min_accel);
@@ -98,6 +99,8 @@ void temper_task(void* ignore)
     };
 
     float temperature;
+    float min_temp =  100.0f;
+    float max_temp = -100.0f;
 
     onewire_bus_handle_t owb_handle;
     ESP_ERROR_CHECK(onewire_new_bus_rmt(&owb_config, &owb_handle));
@@ -109,11 +112,20 @@ void temper_task(void* ignore)
 
     for(;;)
     {
+        vTaskDelay(300/portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(owb_handle, NULL));
         vTaskDelay(200/portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(ds18b20_get_temperature(owb_handle, NULL, &temperature));
 
-        xQueueOverwrite(temper_queue, &temperature);
+        xQueuePeek(min_temp_queue, &min_temp, 0);
+        xQueuePeek(max_temp_queue, &max_temp, 0);
+        
+        min_temp = temperature < min_temp ? temperature : min_temp;
+        max_temp = temperature > max_temp ? temperature : max_temp;
+
+        xQueueOverwrite(temp_queue, &temperature);
+        xQueueOverwrite(min_temp_queue, &min_temp);
+        xQueueOverwrite(max_temp_queue, &max_temp);
     }
 }
 
@@ -122,12 +134,19 @@ button_task(void* ignore)
 {
     gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
 
+    int16_t min_accel = INT16_MAX;
+    int16_t max_accel = INT16_MIN;
+    float min_temp =  100;
+    float max_temp = -100;
+
     for(;;)
     {
         if (gpio_get_level(BUTTON_PIN) == 1)
         {
-            reset_maxmin_values();
-            reset_buffer(buffer, MAX_BUFF_SIZE);
+            xQueueOverwrite(min_accel_queue, &min_accel);
+            xQueueOverwrite(max_accel_queue, &max_accel);
+            xQueueOverwrite(min_temp_queue, &min_temp);
+            xQueueOverwrite(max_temp_queue, &max_temp);
         }
     }
 }
@@ -135,13 +154,13 @@ button_task(void* ignore)
 void app_main(void)
 {
     accel_queue = xQueueCreate(1, sizeof(float));
-    temper_queue = xQueueCreate(1, sizeof(float));
+    temp_queue = xQueueCreate(1, sizeof(float));
 
-    max_accel_queue = xQueueCreate(1, sizeof(float));
-    min_accel_queue = xQueueCreate(1, sizeof(float));
+    max_accel_queue = xQueueCreate(1, sizeof(int16_t));
+    min_accel_queue = xQueueCreate(1, sizeof(int16_t));
 
-    max_temper_queue = xQueueCreate(1, sizeof(float));
-    min_temper_queue = xQueueCreate(1, sizeof(float));
+    max_temp_queue = xQueueCreate(1, sizeof(float));
+    min_temp_queue = xQueueCreate(1, sizeof(float));
 
     TaskHandle_t mpu6050_task_handle;
     TaskHandle_t ds18b20_task_handle;
@@ -158,8 +177,9 @@ void app_main(void)
                 &button_task_handle);
 
     float current_rms;
-    float current_temper;
-    float current_accel_max, current_accel_min;
+    float current_temp;
+    int16_t current_accel_max, current_accel_min;
+    float current_temp_max, current_temp_min;
 
     // Configurando display OLED:
     SSD1306_t oled;
@@ -172,32 +192,42 @@ void app_main(void)
     vTaskDelay(2000/portTICK_PERIOD_MS);
     ssd1306_clear_screen(&oled, false);
 
-    char text_accel[MAX_TEXT_SIZE], text_temper[MAX_TEXT_SIZE];
+    char text_accel[MAX_TEXT_SIZE], text_temp[MAX_TEXT_SIZE];
     char text_accel_max[MAX_TEXT_SIZE], text_accel_min[MAX_TEXT_SIZE];
+    char text_temp_max[MAX_TEXT_SIZE], text_temp_min[MAX_TEXT_SIZE];
 
     for(;;)
     {
         vTaskDelay(200/portTICK_PERIOD_MS);
 
         xQueuePeek(accel_queue, (void *) &current_rms, 0);
-        xQueuePeek(temper_queue, (void* ) &current_temper, 0);
+        xQueuePeek(temp_queue, (void* ) &current_temp, 0);
         xQueuePeek(max_accel_queue, (void* ) &current_accel_max, 0);
         xQueuePeek(min_accel_queue, (void* ) &current_accel_min, 0);
+        xQueuePeek(min_temp_queue, &current_temp_min, 0);
+        xQueuePeek(max_temp_queue, &current_temp_max, 0);
         
         /* Exibição dos valores no display */
 
         /* Aceleração */
-        sprintf(text_accel, "RMS_acc: %.3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
+        sprintf(text_accel, "RMS_acc: % .3f g  ", current_rms/MPU6050_ACCEL_LSB_SENS_2G);
         ssd1306_display_text(&oled, 0, text_accel, strlen(text_accel), false);
 
-        sprintf(text_accel_max, "MAX_acc: %.3f g  ", current_accel_max/MPU6050_ACCEL_LSB_SENS_2G);
-        ssd1306_display_text(&oled, 1, text_accel_max, strlen(text_accel_max), false);
+        sprintf(text_accel_min, "min: % .3f g  ", ((float) current_accel_min)/MPU6050_ACCEL_LSB_SENS_2G);
+        ssd1306_display_text(&oled, 1, text_accel_min, strlen(text_accel_min), false); 
 
-        sprintf(text_accel_min, "MIN_acc: %.3f g  ", current_accel_min/MPU6050_ACCEL_LSB_SENS_2G);
-        ssd1306_display_text(&oled, 2, text_accel_min, strlen(text_accel_min), false); 
+        sprintf(text_accel_max, "max: % .3f g  ", ((float) current_accel_max)/MPU6050_ACCEL_LSB_SENS_2G);
+        ssd1306_display_text(&oled, 2, text_accel_max, strlen(text_accel_max), false);
 
         /* Temperatura */
-        sprintf(text_temper, "Temp: %.1f oC", current_temper);
-        ssd1306_display_text(&oled, 4, text_temper, strlen(text_temper), false);        
+        sprintf(text_temp, "Temp: %.1f oC", current_temp);
+        ssd1306_display_text(&oled, 5, text_temp, strlen(text_temp), false);
+
+        sprintf(text_temp_min, "min: % .1f oC  ", current_temp_min == 100.0f ? 0.0f : current_temp_min);
+        ssd1306_display_text(&oled, 6, text_temp_min, strlen(text_temp_min), false);  
+
+        sprintf(text_temp_max, "max: % .1f oC  ", current_temp_max == -100.0f ? 0.0f : current_temp_max);
+        ssd1306_display_text(&oled, 7, text_temp_max, strlen(text_temp_max), false);
+
     }
 }
