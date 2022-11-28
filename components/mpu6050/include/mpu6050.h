@@ -39,14 +39,17 @@ typedef struct
 
 extern i2c_port_t mpu6050_i2c_port;
 
+/**
+ * @brief Instala driver do chip MPU6050.
+ * @param[in] config Estrutura com informações para configuração do dispositivo.
+*/
 void mpu6050_accel_install(mpu6050_config_t * config);
-/**
- * @brief Configura a resolução do acelerômetro;
-*/
 
-void mpu6050_accel_read(mpu6050_accel_data * accel_data);
 /**
- * @brief Lê dados do acelerômetro;
+ * @brief Lê dados do acelerômetro.
+ * @param[out] accel_data Estrutura contendo resultado da leitura do acelerômetro.
 */
+void mpu6050_accel_read(mpu6050_accel_data * accel_data);
+
 
 #endif
