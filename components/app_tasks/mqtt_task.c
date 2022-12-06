@@ -11,7 +11,7 @@ const char * TAG = "mqtt_task";
 extern QueueHandle_t accel_queue;
 extern QueueHandle_t temp_queue;
 
-void publisher_task(void *ignore)
+static void publisher_task(void *ignore)
 {
     esp_mqtt_client_config_t mqtt_config = {
         .broker.address.uri = "mqtt://broker.emqx.io",
@@ -38,11 +38,11 @@ void publisher_task(void *ignore)
         
         esp_mqtt_client_publish(client, "grupoX/temperatura", temperature, 10, 0, 0);
         esp_mqtt_client_publish(client, "grupoX/rmsvibracao", accel_rms, 10, 0, 0);
-        ESP_LOGI(TAG, "Mensagem enviada");
+        // ESP_LOGI(TAG, "Mensagem enviada");
     }
 }
 
-void cb_connection_ok(void *pvParameter){
+static void cb_connection_ok(void *pvParameter){
 	ip_event_got_ip_t* param = (ip_event_got_ip_t*)pvParameter;
 
 	/* transform IP to human readable string */
@@ -59,5 +59,6 @@ void mqtt_task(void *ignore)
 {
     wifi_manager_start();
     wifi_manager_set_callback(WM_EVENT_STA_GOT_IP, cb_connection_ok);
+    
     for(;;) vTaskDelay(1000);
 }
