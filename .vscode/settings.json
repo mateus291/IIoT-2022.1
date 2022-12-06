@@ -10,5 +10,8 @@
     "idf.pythonBinPathWin": "C:\\Users\\mateu\\.espressif\\python_env\\idf5.0_py3.8_env\\Scripts\\python.exe",
     "idf.toolsPathWin": "C:\\Users\\mateu\\.espressif",
     "idf.flashType": "UART",
-    "idf.portWin": "COM4"
+    "idf.portWin": "COM4",
+    "files.associations": {
+        "mqtt_client.h": "c"
+    }
 }

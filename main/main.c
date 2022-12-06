@@ -15,9 +15,11 @@ void app_main(void)
     TaskHandle_t temp_task_handle;
     TaskHandle_t button_task_handle;
     TaskHandle_t oled_task_handle;
+    TaskHandle_t mqtt_task_handle;
 
     xTaskCreate(accel_task, "accel_task", 10000, NULL, 3, &accel_task_handle);
     xTaskCreate(temp_task, "temp_task", 10000, NULL, 3, &temp_task_handle);
     xTaskCreate(button_task, "button_task", 10000, NULL, 1, &button_task_handle);
     xTaskCreate(oled_task, "oled_task", 10000, NULL, 2, &oled_task_handle);
+    xTaskCreate(mqtt_task, "mqtt_task", 10000, NULL, 1, &mqtt_task_handle);
 }

@@ -20,3 +20,4 @@ void accel_task(void * ignore);
 void temp_task(void * ignore);
 void button_task(void * ignore);
 void oled_task(void * ignore);
+void mqtt_task(void * ignore);
