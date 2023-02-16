@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "app_tasks.h"
 #include "wifi_manager.h"
@@ -14,7 +15,9 @@ extern QueueHandle_t temp_queue;
 static void publisher_task(void *ignore)
 {
     esp_mqtt_client_config_t mqtt_config = {
-        .broker.address.uri = "mqtt://broker.emqx.io",
+        .broker.address.uri = "mqtt://827677fef74a4840be0e4364cff5581f.s2.eu.hivemq.cloud",
+        .credentials.username = "vibsensor",
+        .credentials.authentication.password = "iiot20221",
     };
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config);
     esp_mqtt_client_start(client);
@@ -23,8 +26,9 @@ static void publisher_task(void *ignore)
     accel_queue_data_t accel_queue_data;
     temp_queue_data_t temp_queue_data;
 
-    char temperature[10] = {0};
-    char accel_rms[10] = {0};
+    time_t now;
+    char strftime_buf[64];
+    struct tm timeinfo;
 
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
@@ -33,11 +37,22 @@ static void publisher_task(void *ignore)
         
         xQueuePeek(accel_queue, (void *) &accel_queue_data, 0);
         xQueuePeek(temp_queue, (void *) &temp_queue_data, 0);
-        sprintf(temperature, "%.1f", temp_queue_data.temp);
-        sprintf(accel_rms, "%.3f", accel_queue_data.rms);
-        
-        esp_mqtt_client_publish(client, "grupoX/temperatura", temperature, 10, 0, 0);
-        esp_mqtt_client_publish(client, "grupoX/rmsvibracao", accel_rms, 10, 0, 0);
+
+        time(&now);
+        // Set timezone to China Standard Time
+        setenv("TZ", "UTC-4", 1);
+        tzset();
+
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+        char datastr[255];
+        sprintf(datastr,
+            "{\"data\":{\"rms\":\"%.3f\",\"temp\":\"%.1f\",\"time\":\"%s\"},\"meta\":{\"f\":\"100Hz\",\"u\":\"g, C\",\"disp\":\"ds18b20, mpu6050\"}}",
+            accel_queue_data.rms, temp_queue_data.temp, strftime_buf);
+        esp_mqtt_client_publish(client, "sensorDataIn", datastr, 0, 2, 0);
+        if(accel_queue_data.rms >= 2)
+            esp_mqtt_client_publish(client, "warning", "max rms!", 0, 2, 0);
         // ESP_LOGI(TAG, "Mensagem enviada");
     }
 }
