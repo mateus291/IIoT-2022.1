@@ -1,23 +1,27 @@
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "app_tasks.h"
 #include "wifi_manager.h"
 #include "mqtt_client.h"
 #include "esp_log.h"
+#include "mpu6050.h"
 
 const char * TAG = "mqtt_task";
 
 extern QueueHandle_t accel_queue;
 extern QueueHandle_t temp_queue;
 
+extern const uint8_t mqtt_eclipseprojects_io_pem_start[]   asm("_binary_mqtt_eclipseprojects_io_pem_start");
+extern const uint8_t mqtt_eclipseprojects_io_pem_end[]   asm("_binary_mqtt_eclipseprojects_io_pem_end");
+
 static void publisher_task(void *ignore)
 {
     esp_mqtt_client_config_t mqtt_config = {
-        .broker.address.uri = "mqtt://827677fef74a4840be0e4364cff5581f.s2.eu.hivemq.cloud",
-        .credentials.username = "vibsensor",
-        .credentials.authentication.password = "iiot20221",
+        .broker.address.uri = "mqtts://vibsensor:iiot20221@827677fef74a4840be0e4364cff5581f.s2.eu.hivemq.cloud:8883",
+        .broker.verification.certificate = (const char *)mqtt_eclipseprojects_io_pem_start, 
     };
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config);
     esp_mqtt_client_start(client);
@@ -30,6 +34,8 @@ static void publisher_task(void *ignore)
     char strftime_buf[64];
     struct tm timeinfo;
 
+    settimeofday(&now, NULL);
+
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     for(;;){
@@ -40,20 +46,18 @@ static void publisher_task(void *ignore)
 
         time(&now);
         // Set timezone to China Standard Time
-        setenv("TZ", "UTC-4", 1);
-        tzset();
 
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
 
-        char datastr[255];
+        char datastr[255] = {0};
         sprintf(datastr,
             "{\"data\":{\"rms\":\"%.3f\",\"temp\":\"%.1f\",\"time\":\"%s\"},\"meta\":{\"f\":\"100Hz\",\"u\":\"g, C\",\"disp\":\"ds18b20, mpu6050\"}}",
-            accel_queue_data.rms, temp_queue_data.temp, strftime_buf);
-        esp_mqtt_client_publish(client, "sensorDataIn", datastr, 0, 2, 0);
+            accel_queue_data.rms/MPU6050_ACCEL_LSB_SENS_2G, temp_queue_data.temp, strftime_buf);
+        esp_mqtt_client_publish(client, "sensorDataIn", datastr, 0, 0, 0);
         if(accel_queue_data.rms >= 2)
-            esp_mqtt_client_publish(client, "warning", "max rms!", 0, 2, 0);
-        // ESP_LOGI(TAG, "Mensagem enviada");
+            esp_mqtt_client_publish(client, "warning", "max rms!", 0, 0, 0);
+        ESP_LOGI(TAG, "%s",datastr);
     }
 }
 

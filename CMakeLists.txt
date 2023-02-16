@@ -6,3 +6,5 @@ cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(IIoT_2022_1)
+
+target_add_binary_data(IIoT_2022_1.elf "main/mqtt_eclipseprojects_io.pem" TEXT)
