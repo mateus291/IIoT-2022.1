@@ -39,21 +39,21 @@ static void publisher_task(void *ignore)
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     for(;;){
-        xTaskDelayUntil(&xLastWakeTime, 60000/portTICK_PERIOD_MS);
+        xTaskDelayUntil(&xLastWakeTime, 30000/portTICK_PERIOD_MS);
         
         xQueuePeek(accel_queue, (void *) &accel_queue_data, 0);
         xQueuePeek(temp_queue, (void *) &temp_queue_data, 0);
 
         time(&now);
-        // Set timezone to China Standard Time
 
         localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
 
         char datastr[255] = {0};
+        char * meta = "\"meta\":{\"f\":\"100Hz\",\"u\":\"g, C\",\"disp\":\"ds18b20, mpu6050\"}}";
         sprintf(datastr,
-            "{\"data\":{\"rms\":\"%.3f\",\"temp\":\"%.1f\",\"time\":\"%s\"},\"meta\":{\"f\":\"100Hz\",\"u\":\"g, C\",\"disp\":\"ds18b20, mpu6050\"}}",
-            accel_queue_data.rms/MPU6050_ACCEL_LSB_SENS_2G, temp_queue_data.temp, strftime_buf);
+            "{\"data\":{\"rms\":\"%.3f\",\"temp\":\"%.1f\",\"time\":\"%s\"},%s",
+            accel_queue_data.rms/MPU6050_ACCEL_LSB_SENS_2G,temp_queue_data.temp,strftime_buf,meta);
         esp_mqtt_client_publish(client, "sensorDataIn", datastr, 0, 0, 0);
         if(accel_queue_data.rms >= 2)
             esp_mqtt_client_publish(client, "warning", "max rms!", 0, 0, 0);
